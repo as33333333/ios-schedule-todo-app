@@ -104,11 +104,24 @@ function formatTime(value: string) {
   return value ? value.slice(11, 16) : '';
 }
 
-function formatTodoDue(value: string) {
-  if (!value) return '今天';
-  const date = new Date(value);
+function formatZhDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
   if (Number.isNaN(date.getTime())) return '今天';
-  return `${date.getMonth() + 1}月${date.getDate()}日 ${formatTime(value)}`;
+  return `${date.getFullYear()}年${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function formatZhShortDate(value: string) {
+  const date = new Date(`${value}T00:00:00`);
+  if (Number.isNaN(date.getTime())) return '今天';
+  return `${date.getMonth() + 1}月${date.getDate()}日`;
+}
+
+function formatDisplayTime(value: string) {
+  const [hour, minute] = value.split(':').map(Number);
+  if (Number.isNaN(hour) || Number.isNaN(minute)) return value;
+  const period = hour < 12 ? '上午' : '下午';
+  const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
+  return `${period} ${hour12}:${String(minute).padStart(2, '0')}`;
 }
 
 function App() {
@@ -126,8 +139,11 @@ function App() {
   const [todoPriority, setTodoPriority] = useState<Priority>('P1');
   const [todoType, setTodoType] = useState<TodoType>('工作');
   const [todoNote, setTodoNote] = useState('');
-  const [todoStart, setTodoStart] = useState('');
-  const [todoEnd, setTodoEnd] = useState('');
+  const [todoAllDay, setTodoAllDay] = useState(false);
+  const [todoStartDate, setTodoStartDate] = useState('2026-07-08');
+  const [todoEndDate, setTodoEndDate] = useState('2026-07-08');
+  const [todoStartTime, setTodoStartTime] = useState('04:00');
+  const [todoEndTime, setTodoEndTime] = useState('05:00');
   const [todoRecurring, setTodoRecurring] = useState(false);
   const [todoRecurrenceRule, setTodoRecurrenceRule] = useState('每天');
   const [todoStepDraft, setTodoStepDraft] = useState('');
@@ -159,6 +175,10 @@ function App() {
     );
   };
 
+  const updateProgress = (id: number, progress: number) => {
+    setTodos((current) => current.map((todo) => (todo.id === id ? { ...todo, progress } : todo)));
+  };
+
   const addFocusTodo = () => {
     const nextId = Math.max(...todos.map((todo) => todo.id)) + 1;
     setTodos((current) => [
@@ -186,8 +206,8 @@ function App() {
         priority: todoPriority,
         type: todoType,
         progress: 0,
-        due: todoEnd ? formatTodoDue(todoEnd) : '今天',
-        time: todoStart && todoEnd ? `${formatTime(todoStart)}-${formatTime(todoEnd)}` : undefined,
+        due: todoAllDay ? formatZhShortDate(todoEndDate) : `${formatZhShortDate(todoEndDate)} ${formatDisplayTime(todoEndTime)}`,
+        time: todoAllDay ? '全天' : `${todoStartTime}-${todoEndTime}`,
         note: todoNote || undefined,
         isTodayFocus: true,
         isRecurring: todoRecurring,
@@ -199,8 +219,11 @@ function App() {
     setTodoPriority('P1');
     setTodoType('工作');
     setTodoNote('');
-    setTodoStart('');
-    setTodoEnd('');
+    setTodoAllDay(false);
+    setTodoStartDate('2026-07-08');
+    setTodoEndDate('2026-07-08');
+    setTodoStartTime('04:00');
+    setTodoEndTime('05:00');
     setTodoRecurring(false);
     setTodoRecurrenceRule('每天');
     setTodoStepDraft('');
@@ -266,6 +289,7 @@ function App() {
               setGroupBy={setGroupBy}
               completeTodo={completeTodo}
               bumpProgress={bumpProgress}
+              updateProgress={updateProgress}
               addFocusTodo={addFocusTodo}
               completedCount={completedCount}
               nickname={nickname}
@@ -375,35 +399,98 @@ function App() {
                 </select>
               </label>
             </div>
-            <div className="form-row">
-              <label>
-                计划开始
-                <input
-                  className="text-input compact-input"
-                  type="datetime-local"
-                  value={todoStart}
-                  onChange={(event) => setTodoStart(event.target.value)}
-                />
-              </label>
-              <label>
-                计划截止
-                <input
-                  className="text-input compact-input"
-                  type="datetime-local"
-                  value={todoEnd}
-                  onChange={(event) => setTodoEnd(event.target.value)}
-                />
-              </label>
-            </div>
+            <section className="schedule-card">
+              <div className="calendar-toggle-row">
+                <strong>全天</strong>
+                <button
+                  type="button"
+                  className={`ios-switch ${todoAllDay ? 'on' : ''}`}
+                  aria-label="全天"
+                  onClick={() => setTodoAllDay(!todoAllDay)}
+                >
+                  <span />
+                </button>
+              </div>
+              <div className="date-time-row">
+                <strong>开始</strong>
+                <div className="date-time-controls">
+                  <select value={todoStartDate} onChange={(event) => setTodoStartDate(event.target.value)}>
+                    <option value="2026-07-08">2026年7月8日</option>
+                    <option value="2026-07-09">2026年7月9日</option>
+                    <option value="2026-07-10">2026年7月10日</option>
+                  </select>
+                  {!todoAllDay && (
+                    <select value={todoStartTime} onChange={(event) => setTodoStartTime(event.target.value)}>
+                      <option value="04:00">上午 4:00</option>
+                      <option value="09:00">上午 9:00</option>
+                      <option value="10:00">上午 10:00</option>
+                      <option value="14:00">下午 2:00</option>
+                      <option value="16:00">下午 4:00</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+              <div className="mini-month">
+                <div className="mini-month-title">2026年7月</div>
+                {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+                  <span className="mini-weekday" key={day}>{day}</span>
+                ))}
+                {Array.from({ length: 35 }, (_, index) => {
+                  const date = index - 2;
+                  if (date < 1 || date > 31) return <span className="mini-empty" key={index} />;
+                  const value = `2026-07-${String(date).padStart(2, '0')}`;
+                  return (
+                    <button
+                      type="button"
+                      className={todoStartDate === value ? 'selected' : ''}
+                      key={value}
+                      onClick={() => {
+                        setTodoStartDate(value);
+                        setTodoEndDate(value);
+                      }}
+                    >
+                      {date}
+                    </button>
+                  );
+                })}
+              </div>
+              {!todoAllDay && (
+                <div className="time-wheel">
+                  <span>上午</span>
+                  <strong>{todoStartTime.split(':')[0].replace(/^0/, '')}</strong>
+                  <strong>{todoStartTime.split(':')[1]}</strong>
+                </div>
+              )}
+              <div className="date-time-row end">
+                <strong>结束</strong>
+                <div className="date-time-controls">
+                  <select value={todoEndDate} onChange={(event) => setTodoEndDate(event.target.value)}>
+                    <option value="2026-07-08">2026年7月8日</option>
+                    <option value="2026-07-09">2026年7月9日</option>
+                    <option value="2026-07-10">2026年7月10日</option>
+                  </select>
+                  {!todoAllDay && (
+                    <select value={todoEndTime} onChange={(event) => setTodoEndTime(event.target.value)}>
+                      <option value="05:00">上午 5:00</option>
+                      <option value="10:00">上午 10:00</option>
+                      <option value="11:30">上午 11:30</option>
+                      <option value="15:00">下午 3:00</option>
+                      <option value="17:00">下午 5:00</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+            </section>
             <label className="toggle-row">
               <span>
                 <strong>是否循环</strong>
                 <small>开启后视为习惯</small>
               </span>
-              <input
-                type="checkbox"
-                checked={todoRecurring}
-                onChange={(event) => setTodoRecurring(event.target.checked)}
+              <button
+                type="button"
+                className={`round-check ${todoRecurring ? 'on' : ''}`}
+                aria-label="是否循环"
+                onClick={() => setTodoRecurring(!todoRecurring)}
               />
             </label>
             {todoRecurring && (
@@ -428,7 +515,7 @@ function App() {
                   <p className="eyebrow">具体步骤</p>
                   <h3>手动添加或 AI 拆分</h3>
                 </div>
-                <button className="small-action purple" onClick={splitStepsWithAI}>
+                <button type="button" className="small-action purple" onClick={splitStepsWithAI}>
                   <Wand2 size={14} />
                   AI
                 </button>
@@ -440,7 +527,7 @@ function App() {
                   onChange={(event) => setTodoStepDraft(event.target.value)}
                   placeholder="输入一个步骤"
                 />
-                <button className="small-action" onClick={addManualStep}>
+                <button type="button" className="small-action" onClick={addManualStep}>
                   添加
                 </button>
               </div>
@@ -498,6 +585,7 @@ function HomeScreen({
   setGroupBy,
   completeTodo,
   bumpProgress,
+  updateProgress,
   addFocusTodo,
   completedCount,
   nickname,
@@ -511,6 +599,7 @@ function HomeScreen({
   setGroupBy: (value: 'priority' | 'type') => void;
   completeTodo: (id: number) => void;
   bumpProgress: (id: number) => void;
+  updateProgress: (id: number, progress: number) => void;
   addFocusTodo: () => void;
   completedCount: number;
   nickname: string;
@@ -567,7 +656,12 @@ function HomeScreen({
             <section className="list-panel glass" key={group.key}>
               <h3>{group.key}</h3>
               {group.items.map((todo) => (
-                <TodoRow key={todo.id} todo={todo} completeTodo={completeTodo} bumpProgress={bumpProgress} />
+                <TodoRow
+                  key={todo.id}
+                  todo={todo}
+                  completeTodo={completeTodo}
+                  updateProgress={updateProgress}
+                />
               ))}
             </section>
           ) : null
@@ -586,11 +680,11 @@ function HomeScreen({
 function TodoRow({
   todo,
   completeTodo,
-  bumpProgress
+  updateProgress
 }: {
   todo: Todo;
   completeTodo: (id: number) => void;
-  bumpProgress: (id: number) => void;
+  updateProgress: (id: number, progress: number) => void;
 }) {
   const atRisk = todo.priority === 'P0' && todo.progress < 50;
   return (
@@ -605,17 +699,17 @@ function TodoRow({
         </div>
         <p>{todo.note ?? `${todo.type} · ${todo.due}`}</p>
       </div>
-      <button className="progress-ring" onClick={() => bumpProgress(todo.id)} aria-label="更新进度">
-        <svg viewBox="0 0 36 36">
-          <path className="ring-bg" d="M18 2.8a15.2 15.2 0 1 1 0 30.4a15.2 15.2 0 0 1 0-30.4" />
-          <path
-            className="ring-fg"
-            strokeDasharray={`${todo.progress}, 100`}
-            d="M18 2.8a15.2 15.2 0 1 1 0 30.4a15.2 15.2 0 0 1 0-30.4"
-          />
-        </svg>
-        <span>{todo.progress}</span>
-      </button>
+      <div className="progress-slider" aria-label="更新进度">
+        <span>{todo.progress}%</span>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          step="5"
+          value={todo.progress}
+          onChange={(event) => updateProgress(todo.id, Number(event.target.value))}
+        />
+      </div>
     </div>
   );
 }
@@ -627,12 +721,16 @@ function CalendarScreen({
   view: 'day' | 'week' | 'month';
   setView: (value: 'day' | 'week' | 'month') => void;
 }) {
+  const calendarTitle =
+    view === 'day' ? '2026年7月8日' : view === 'week' ? '2026年7月5日 - 11日' : '2026年7月';
+  const calendarSubtitle = view === 'day' ? '周三' : view === 'week' ? '周视图' : '月视图';
+
   return (
     <div className="page">
       <header className="hero-row compact">
         <div>
-          <p className="date-label">2026年7月</p>
-          <h1>日历</h1>
+          <p className="date-label">日历 · {calendarSubtitle}</p>
+          <h1 className="calendar-title">{calendarTitle}</h1>
         </div>
         <button className="icon-button glass" aria-label="新增日程">
           <Plus size={22} />
@@ -659,53 +757,74 @@ function CalendarScreen({
 }
 
 function DayCalendar() {
-  const hours = ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'];
+  const stripDays = [
+    { day: '日', date: 5 },
+    { day: '一', date: 6 },
+    { day: '二', date: 7 },
+    { day: '三', date: 8 },
+    { day: '四', date: 9 },
+    { day: '五', date: 10 },
+    { day: '六', date: 11 }
+  ];
+  const hours = ['上午 7时', '上午 8时', '上午 9时', '上午 10时', '上午 11时', '正午', '下午 1时', '下午 2时', '下午 3时', '下午 4时', '下午 5时', '下午 6时', '下午 7时', '下午 8时', '下午 9时'];
   return (
-    <section className="calendar-panel glass">
-      {hours.map((time) => (
-        <div className="time-line" key={time}>
-          <span>{time}</span>
-          <i />
-        </div>
-      ))}
-      {calendarBlocks.map((block) => (
-        <div
-          className={`calendar-block ${block.priority.toLowerCase()}`}
-          key={block.id}
-          style={{
-            top: `${(parseInt(block.start) - 8) * 72 + (block.start.includes(':20') ? 24 : 0) + 18}px`,
-            left: `calc(58px + ${block.column * (100 / block.columns)}%)`,
-            width: `calc((100% - 70px) / ${block.columns} - 6px)`
-          }}
-        >
-          <strong>{block.title}</strong>
-          <span>
-            {block.start}-{block.end}
-          </span>
-        </div>
-      ))}
+    <section className="day-calendar glass">
+      <div className="day-strip">
+        {stripDays.map((item) => (
+          <button className={item.date === 8 ? 'selected' : ''} key={item.date}>
+            <span>{item.day}</span>
+            <strong>{item.date}</strong>
+          </button>
+        ))}
+      </div>
+      <div className="day-title-block">
+        <h2>2026年7月8日 - 周三</h2>
+        <p>丙午年五月廿四</p>
+      </div>
+      <div className="all-day-event">
+        <span>全天</span>
+        <strong>今天只做几件事</strong>
+      </div>
+      <div className="day-time-grid">
+        {hours.map((time) => (
+          <div className="day-time-line" key={time}>
+            <span>{time}</span>
+            <i />
+          </div>
+        ))}
+        <div className="day-event p0">产品原型第一版</div>
+        <div className="day-event p1">整理本周复盘</div>
+      </div>
     </section>
   );
 }
 
 function WeekCalendar() {
-  const days = ['周一', '周二', '周三', '周四', '周五', '周六', '周日'];
-  const hours = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00', '18:00'];
+  const days = [
+    { label: '周日', date: 5 },
+    { label: '周一', date: 6 },
+    { label: '周二', date: 7 },
+    { label: '周三', date: 8 },
+    { label: '周四', date: 9 },
+    { label: '周五', date: 10 },
+    { label: '周六', date: 11 }
+  ];
+  const hours = ['上午 7时', '上午 8时', '上午 9时', '上午 10时', '上午 11时', '正午', '下午 1时', '下午 2时', '下午 3时', '下午 4时', '下午 5时', '下午 6时', '下午 7时', '下午 8时', '下午 9时'];
   return (
     <section className="week-panel glass">
       <div className="week-grid">
         <div className="week-corner">GMT+8</div>
         {days.map((day, index) => (
-          <div className={`week-date ${index === 1 ? 'today' : ''}`} key={day}>
-            <strong>{day}</strong>
-            <span>{6 + index}</span>
+          <div className={`week-date ${day.date === 8 ? 'today' : ''}`} key={day.date}>
+            <strong>{day.label}</strong>
+            <span>{day.date}</span>
           </div>
         ))}
         {hours.flatMap((hour) =>
           [
             <div className="week-time" key={hour}>{hour}</div>,
             ...days.map((day, index) => (
-              <div className="week-slot" key={`${hour}-${day}`} data-today={index === 1 ? 'true' : undefined} />
+              <div className="week-slot" key={`${hour}-${day.date}`} data-today={index === 3 ? 'true' : undefined} />
             ))
           ]
         )}
@@ -719,15 +838,25 @@ function WeekCalendar() {
 }
 
 function MonthCalendar() {
+  const cells = [
+    { date: 28, inactive: true },
+    { date: 29, inactive: true },
+    { date: 30, inactive: true },
+    ...Array.from({ length: 31 }, (_, index) => ({ date: index + 1, inactive: false })),
+    { date: 1, inactive: true }
+  ];
   return (
     <section className="month-panel glass">
-      {Array.from({ length: 35 }, (_, index) => {
-        const date = index + 1;
+      {['日', '一', '二', '三', '四', '五', '六'].map((day) => (
+        <strong className="month-weekday" key={day}>{day}</strong>
+      ))}
+      {cells.map((cell, index) => {
+        const date = cell.date;
         return (
-          <div className={`month-cell ${date === 7 ? 'today' : ''}`} key={date}>
+          <div className={`month-cell ${date === 8 && !cell.inactive ? 'today' : ''} ${cell.inactive ? 'inactive' : ''}`} key={`${date}-${index}`}>
             <span>{date}</span>
-            {[7, 8, 11, 16, 22].includes(date) && <small>待办</small>}
-            {[7, 16].includes(date) && <small className="blue">重点</small>}
+            {!cell.inactive && [7, 8, 11, 16, 22].includes(date) && <small>待办</small>}
+            {!cell.inactive && [8, 16].includes(date) && <small className="blue">重点</small>}
           </div>
         );
       })}
