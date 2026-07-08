@@ -905,6 +905,13 @@ h3 {
   gap: 12px;
 }
 
+.linked-task {
+  width: 100%;
+  padding: 14px;
+  border-radius: 22px;
+  text-align: left;
+}
+
 .linked-task p,
 .profile-head p,
 .premium p,
@@ -913,6 +920,41 @@ h3 {
   color: #6b7280;
   font-size: 13px;
   line-height: 1.4;
+}
+
+.focus-picker {
+  display: grid;
+  gap: 10px;
+  border-radius: 22px;
+  padding: 14px;
+}
+
+.focus-choice-list {
+  display: grid;
+  gap: 8px;
+}
+
+.focus-choice-list button {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 9px;
+  min-height: 44px;
+  border-radius: 15px;
+  padding: 9px 10px;
+  background: rgba(255, 255, 255, 0.48);
+  text-align: left;
+}
+
+.focus-choice-list button.selected {
+  background: rgba(0, 122, 255, 0.12);
+  color: #0066d6;
+}
+
+.focus-choice-list small {
+  color: #6b7280;
+  font-size: 12px;
+  font-weight: 800;
 }
 
 .focus-actions {

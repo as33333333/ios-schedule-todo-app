@@ -150,6 +150,7 @@ function App() {
   const [todoSteps, setTodoSteps] = useState<string[]>([]);
   const [showAssociateSheet, setShowAssociateSheet] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
+  const [focusTodoId, setFocusTodoId] = useState(1);
   const [nickname, setNickname] = useState(() => window.localStorage.getItem('schedule-todo-nickname') ?? '');
   const [nicknameDraft, setNicknameDraft] = useState(nickname);
 
@@ -248,7 +249,11 @@ function App() {
   };
 
   const associateTodayFocus = (id: number) => {
-    setTodos((current) => current.map((todo) => (todo.id === id ? { ...todo, isTodayFocus: true } : todo)));
+    setTodos((current) => {
+      const target = current.find((todo) => todo.id === id);
+      if (!target) return current;
+      return [{ ...target, isTodayFocus: true }, ...current.filter((todo) => todo.id !== id)];
+    });
     setShowAssociateSheet(false);
   };
 
@@ -307,6 +312,9 @@ function App() {
               isPaused={isPaused}
               setIsPaused={setIsPaused}
               setShowReflection={setShowReflection}
+              todos={activeTodos}
+              focusTodoId={focusTodoId}
+              setFocusTodoId={setFocusTodoId}
             />
           )}
           {activeTab === 'analytics' && <AnalyticsScreen />}
@@ -631,13 +639,14 @@ function HomeScreen({
           </button>
         </div>
         <div className="focus-list">
-          {todayFocus.slice(0, 3).map((todo) => (
+          {todayFocus.slice(0, 5).map((todo) => (
             <button className="focus-item" key={todo.id} onClick={() => bumpProgress(todo.id)}>
               <span className={`priority-dot ${todo.priority.toLowerCase()}`} />
               <span>{todo.title}</span>
               <span className="muted">{todo.time ?? '未安排时间'}</span>
             </button>
           ))}
+          {todayFocus.length === 0 && <p className="empty-note">还没有今日重点，先关联一个待办。</p>}
         </div>
       </section>
 
@@ -871,7 +880,10 @@ function FocusScreen({
   setIsFocusing,
   isPaused,
   setIsPaused,
-  setShowReflection
+  setShowReflection,
+  todos,
+  focusTodoId,
+  setFocusTodoId
 }: {
   mode: 'down' | 'up';
   setMode: (value: 'down' | 'up') => void;
@@ -880,7 +892,12 @@ function FocusScreen({
   isPaused: boolean;
   setIsPaused: (value: boolean) => void;
   setShowReflection: (value: boolean) => void;
+  todos: Todo[];
+  focusTodoId: number;
+  setFocusTodoId: (id: number) => void;
 }) {
+  const selectedTodo = todos.find((todo) => todo.id === focusTodoId) ?? todos[0];
+
   return (
     <div className="page focus-page">
       <header className="hero-row compact">
@@ -902,17 +919,47 @@ function FocusScreen({
       <section className="timer-orb glass-strong">
         <div className="timer-ring">
           <span>{mode === 'down' ? '24:32' : '08:18'}</span>
-          <small>{isFocusing ? (isPaused ? '已暂停' : '正在专注') : '关联：产品原型第一版'}</small>
+          <small>
+            {isFocusing
+              ? isPaused ? '已暂停' : '正在专注'
+              : `关联：${selectedTodo?.title ?? '未选择待办'}`}
+          </small>
         </div>
       </section>
 
-      <section className="linked-task glass">
+      <button className="linked-task glass">
         <Timer size={20} />
         <div>
-          <strong>产品原型第一版</strong>
-          <p>P0 · 今天 18:00 截止</p>
+          <strong>{selectedTodo?.title ?? '选择一个待办开始专注'}</strong>
+          <p>
+            {selectedTodo
+              ? `${selectedTodo.priority} · ${selectedTodo.due} 截止`
+              : '从未完成待办中选择'}
+          </p>
         </div>
         <ChevronRight size={18} />
+      </button>
+
+      <section className="focus-picker glass">
+        <div className="section-heading">
+          <div>
+            <p className="eyebrow">关联待办</p>
+            <h3>选择这次专注要推进的事</h3>
+          </div>
+        </div>
+        <div className="focus-choice-list">
+          {todos.slice(0, 5).map((todo) => (
+            <button
+              className={todo.id === selectedTodo?.id ? 'selected' : ''}
+              key={todo.id}
+              onClick={() => setFocusTodoId(todo.id)}
+            >
+              <span className={`priority-dot ${todo.priority.toLowerCase()}`} />
+              <span>{todo.title}</span>
+              <small>{todo.progress}%</small>
+            </button>
+          ))}
+        </div>
       </section>
 
       <div className="focus-actions">
@@ -945,26 +992,81 @@ function FocusScreen({
 }
 
 function AnalyticsScreen() {
+  const [period, setPeriod] = useState<'day' | 'week' | 'month'>('week');
+  const analytics = {
+    day: {
+      label: '今日',
+      eyebrow: '今日计划兑现率',
+      headline: '64%',
+      trend: '待推进',
+      bars: [22, 42, 36, 64, 48, 58, 64],
+      metrics: [
+        { label: '今日完成', value: '3/7', color: 'blue' },
+        { label: 'P0 完成率', value: '50%', color: 'red' },
+        { label: '专注时长', value: '48m', color: 'green' }
+      ],
+      insight: '今天的关键风险是 P0 事项进度偏低，建议先选择一个待办进入专注，把第一段 25 分钟留给最临近截止的任务。'
+    },
+    week: {
+      label: '本周',
+      eyebrow: '本周计划兑现率',
+      headline: '78%',
+      trend: '+12%',
+      bars: [42, 66, 58, 74, 52, 88, 78],
+      metrics: [
+        { label: 'P0 完成率', value: '66%', color: 'red' },
+        { label: '连续完成', value: '6天', color: 'green' },
+        { label: '专注时长', value: '7.5h', color: 'blue' }
+      ],
+      insight: '本周整体兑现率上升，但低进度临期任务偏多。建议把明天 P0 控制在 3 件以内，并提前给复杂任务拆步骤。'
+    },
+    month: {
+      label: '本月',
+      eyebrow: '本月完成稳定性',
+      headline: '82%',
+      trend: '+8%',
+      bars: [56, 48, 72, 62, 84, 68, 82],
+      metrics: [
+        { label: '完成事项', value: '46', color: 'blue' },
+        { label: '高峰日', value: '周三', color: 'purple' },
+        { label: '延期率', value: '14%', color: 'red' }
+      ],
+      insight: '本月完成情况比较稳定，工作类任务占用较多连续时间。建议每周预留半天做低优先级清理，避免月底堆积。'
+    }
+  }[period];
+
   return (
     <div className="page">
       <header className="hero-row compact">
         <div>
-          <p className="date-label">过去 7 天</p>
+          <p className="date-label">{analytics.label}复盘</p>
           <h1>分析</h1>
         </div>
         <Activity size={26} color="#007AFF" />
       </header>
 
+      <div className="segmented glass three">
+        <button className={period === 'day' ? 'selected' : ''} onClick={() => setPeriod('day')}>
+          日
+        </button>
+        <button className={period === 'week' ? 'selected' : ''} onClick={() => setPeriod('week')}>
+          周
+        </button>
+        <button className={period === 'month' ? 'selected' : ''} onClick={() => setPeriod('month')}>
+          月
+        </button>
+      </div>
+
       <section className="chart-panel glass-strong">
         <div className="section-heading">
           <div>
-            <p className="eyebrow">计划兑现率</p>
-            <h2>78%</h2>
+            <p className="eyebrow">{analytics.eyebrow}</p>
+            <h2>{analytics.headline}</h2>
           </div>
-          <span className="trend">+12%</span>
+          <span className="trend">{analytics.trend}</span>
         </div>
         <div className="bars">
-          {[42, 66, 58, 74, 52, 88, 78].map((height, index) => (
+          {analytics.bars.map((height, index) => (
             <i key={index} style={{ height: `${height}%` }} />
           ))}
           <svg viewBox="0 0 260 90" preserveAspectRatio="none">
@@ -974,14 +1076,14 @@ function AnalyticsScreen() {
       </section>
 
       <div className="metric-grid">
-        <Metric label="P0 完成率" value="66%" color="red" />
-        <Metric label="连续完成" value="6天" color="green" />
-        <Metric label="专注时长" value="7.5h" color="blue" />
+        {analytics.metrics.map((metric) => (
+          <Metric key={metric.label} label={metric.label} value={metric.value} color={metric.color} />
+        ))}
       </div>
 
       <section className="insight-panel glass">
-        <h3>建议</h3>
-        <p>明天 P0 控制在 3 件以内。当前低进度临期任务偏多，建议先给「产品原型第一版」安排一段完整专注时间。</p>
+        <h3>{analytics.label}建议</h3>
+        <p>{analytics.insight}</p>
       </section>
     </div>
   );
