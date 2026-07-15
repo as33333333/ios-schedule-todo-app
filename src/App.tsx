@@ -23,7 +23,7 @@ import {
   UserRound,
   Wand2
 } from 'lucide-react';
-import { ReactNode, useMemo, useState } from 'react';
+import { ReactNode, useEffect, useMemo, useState } from 'react';
 
 type Tab = 'home' | 'calendar' | 'focus' | 'analytics' | 'profile';
 type Priority = 'P0' | 'P1' | 'P2';
@@ -126,6 +126,12 @@ function formatDisplayTime(value: string) {
   const period = hour < 12 ? '上午' : '下午';
   const hour12 = hour === 0 ? 12 : hour > 12 ? hour - 12 : hour;
   return `${period} ${hour12}:${String(minute).padStart(2, '0')}`;
+}
+
+function formatTimer(totalSeconds: number) {
+  const minutes = Math.floor(totalSeconds / 60);
+  const seconds = totalSeconds % 60;
+  return `${String(minutes).padStart(2, '0')}:${String(seconds).padStart(2, '0')}`;
 }
 
 function App() {
@@ -360,9 +366,10 @@ function App() {
               isPaused={isPaused}
               setIsPaused={setIsPaused}
               setShowReflection={setShowReflection}
-              todos={activeTodos}
+              todos={todayFocus}
               focusTodoId={focusTodoId}
               setFocusTodoId={setFocusTodoId}
+              openTodoSheet={() => setShowTodoSheet(true)}
             />
           )}
           {activeTab === 'analytics' && <AnalyticsScreen />}
@@ -995,7 +1002,8 @@ function FocusScreen({
   setShowReflection,
   todos,
   focusTodoId,
-  setFocusTodoId
+  setFocusTodoId,
+  openTodoSheet
 }: {
   mode: 'down' | 'up';
   setMode: (value: 'down' | 'up') => void;
@@ -1007,11 +1015,84 @@ function FocusScreen({
   todos: Todo[];
   focusTodoId: number | null;
   setFocusTodoId: (id: number | null) => void;
+  openTodoSheet: () => void;
 }) {
   const [focusDuration, setFocusDuration] = useState<25 | 40 | 60>(40);
   const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const [displaySeconds, setDisplaySeconds] = useState(focusDuration * 60);
+  const [timerAnchorAt, setTimerAnchorAt] = useState<number | null>(null);
+  const [timerAnchorSeconds, setTimerAnchorSeconds] = useState(focusDuration * 60);
   const selectedTodo = focusTodoId === null ? undefined : todos.find((todo) => todo.id === focusTodoId);
-  const timerText = mode === 'down' ? `${focusDuration}:00` : '00:00';
+  const timerText = formatTimer(displaySeconds);
+
+  useEffect(() => {
+    if (!isFocusing && mode === 'down') {
+      setDisplaySeconds(focusDuration * 60);
+      setTimerAnchorSeconds(focusDuration * 60);
+    }
+    if (!isFocusing && mode === 'up') {
+      setDisplaySeconds(0);
+      setTimerAnchorSeconds(0);
+    }
+  }, [focusDuration, isFocusing, mode]);
+
+  useEffect(() => {
+    if (!isFocusing || isPaused || timerAnchorAt === null) return undefined;
+
+    const timerId = window.setInterval(() => {
+      const elapsed = Math.floor((Date.now() - timerAnchorAt) / 1000);
+      if (mode === 'down') {
+        const nextSeconds = Math.max(0, timerAnchorSeconds - elapsed);
+        setDisplaySeconds(nextSeconds);
+        if (nextSeconds <= 0) {
+          window.clearInterval(timerId);
+          setTimerAnchorAt(null);
+          setTimerAnchorSeconds(0);
+          setIsFocusing(false);
+          setIsPaused(false);
+          setShowReflection(true);
+        }
+      } else {
+        setDisplaySeconds(timerAnchorSeconds + elapsed);
+      }
+    }, 250);
+
+    return () => window.clearInterval(timerId);
+  }, [isFocusing, isPaused, mode, setIsFocusing, setIsPaused, setShowReflection, timerAnchorAt, timerAnchorSeconds]);
+
+  const startFocus = () => {
+    const initialSeconds = mode === 'down' ? focusDuration * 60 : 0;
+    setDisplaySeconds(initialSeconds);
+    setTimerAnchorSeconds(initialSeconds);
+    setTimerAnchorAt(Date.now());
+    setIsFocusing(true);
+    setIsPaused(false);
+  };
+
+  const togglePause = () => {
+    if (isPaused) {
+      setTimerAnchorSeconds(displaySeconds);
+      setTimerAnchorAt(Date.now());
+      setIsPaused(false);
+      return;
+    }
+    setTimerAnchorSeconds(displaySeconds);
+    setTimerAnchorAt(null);
+    setIsPaused(true);
+  };
+
+  const finishFocus = () => {
+    setTimerAnchorAt(null);
+    setTimerAnchorSeconds(mode === 'down' ? focusDuration * 60 : 0);
+    if (mode === 'down') {
+      setDisplaySeconds(focusDuration * 60);
+    } else {
+      setDisplaySeconds(0);
+    }
+    setIsFocusing(false);
+    setIsPaused(false);
+    setShowReflection(true);
+  };
 
   return (
     <div className="page focus-page">
@@ -1076,21 +1157,21 @@ function FocusScreen({
         {!isFocusing ? (
           <button
             className="primary-button wide"
-            onClick={() => {
-              setIsFocusing(true);
-              setIsPaused(false);
-            }}
+            onClick={startFocus}
           >
             <Play size={19} />
             开始专注
           </button>
         ) : (
           <>
-            <button className="secondary-button glass" onClick={() => setIsPaused(!isPaused)}>
+            <button className="secondary-button glass" onClick={togglePause}>
               {isPaused ? <Play size={19} /> : <Pause size={19} />}
               {isPaused ? '继续' : '暂停'}
             </button>
-            <button className="primary-button" onClick={() => setShowReflection(true)}>
+            <button
+              className="primary-button"
+              onClick={finishFocus}
+            >
               <CheckCircle2 size={19} />
               完成
             </button>
@@ -1109,17 +1190,6 @@ function FocusScreen({
               <Timer size={28} color="#007AFF" />
             </div>
             <div className="focus-choice-list">
-              <button
-                className={selectedTodo ? '' : 'selected'}
-                onClick={() => {
-                  setFocusTodoId(null);
-                  setShowTaskPicker(false);
-                }}
-              >
-                <span className="priority-dot neutral" />
-                <span>不关联任务</span>
-                <small>可直接开始</small>
-              </button>
               {todos.slice(0, 5).map((todo) => (
                 <button
                   className={todo.id === selectedTodo?.id ? 'selected' : ''}
@@ -1134,6 +1204,29 @@ function FocusScreen({
                   <small>{todo.progress}%</small>
                 </button>
               ))}
+              {todos.length === 0 && <p className="empty-note">今天还没有要做的任务。</p>}
+            </div>
+            <div className="task-picker-actions">
+              <button
+                className="secondary-button glass"
+                onClick={() => {
+                  setShowTaskPicker(false);
+                  openTodoSheet();
+                }}
+              >
+                <Plus size={17} />
+                新增任务
+              </button>
+              <button
+                className="secondary-button glass"
+                onClick={() => {
+                  setFocusTodoId(null);
+                  setShowTaskPicker(false);
+                }}
+              >
+                <Circle size={17} />
+                不关联任务
+              </button>
             </div>
           </section>
         </div>

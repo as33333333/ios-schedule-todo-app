@@ -1134,6 +1134,18 @@ h3 {
   font-weight: 800;
 }
 
+.task-picker-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.task-picker-actions .secondary-button {
+  min-height: 46px;
+  border-radius: 17px;
+}
+
 .focus-actions {
   display: grid;
   grid-template-columns: 1fr 1fr;
