@@ -255,6 +255,10 @@ h3 {
   background: #34c759;
 }
 
+.priority-dot.neutral {
+  background: #c7c7cc;
+}
+
 .muted {
   color: #8e8e93;
   font-size: 12px;
@@ -963,8 +967,9 @@ h3 {
 
 .timer-orb {
   display: grid;
-  min-height: 282px;
-  place-items: center;
+  gap: 14px;
+  min-height: 430px;
+  place-items: center stretch;
 }
 
 .timer-ring {
@@ -976,19 +981,47 @@ h3 {
   border-top-color: #007aff;
   border-radius: 50%;
   text-align: center;
+  justify-self: center;
 }
 
 .timer-ring span {
   display: block;
-  font-size: 42px;
+  font-size: 48px;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.focus-linked-label {
+  min-height: 22px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 800;
+  text-align: center;
+}
+
+.duration-options {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  width: 100%;
+}
+
+.duration-options button {
+  min-height: 36px;
+  border-radius: 999px;
+  background: rgba(17, 24, 39, 0.05);
+  color: #6b7280;
+  font-size: 13px;
   font-weight: 800;
 }
 
-.timer-ring small {
-  display: block;
-  margin-top: -48px;
-  color: #6b7280;
-  font-size: 12px;
+.duration-options button.selected {
+  background: rgba(0, 122, 255, 0.12);
+  color: #007aff;
+}
+
+.focus-association {
+  width: 100%;
 }
 
 .linked-task,
@@ -1001,9 +1034,24 @@ h3 {
 
 .linked-task {
   width: 100%;
+  min-height: 70px;
   padding: 14px;
   border-radius: 22px;
+  background: rgba(255, 255, 255, 0.56);
   text-align: left;
+}
+
+.associate-task-button {
+  display: inline-flex;
+  width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 46px;
+  border-radius: 18px;
+  background: rgba(0, 122, 255, 0.1);
+  color: #007aff;
+  font-weight: 800;
 }
 
 .linked-task p,

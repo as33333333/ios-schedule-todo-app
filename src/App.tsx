@@ -155,7 +155,7 @@ function App() {
   const [showAssociateSheet, setShowAssociateSheet] = useState(false);
   const [showCompletedBox, setShowCompletedBox] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
-  const [focusTodoId, setFocusTodoId] = useState(1);
+  const [focusTodoId, setFocusTodoId] = useState<number | null>(null);
   const [nickname, setNickname] = useState(() => window.localStorage.getItem('schedule-todo-nickname') ?? '');
   const [nicknameDraft, setNicknameDraft] = useState(nickname);
 
@@ -287,7 +287,7 @@ function App() {
   };
 
   const splitStepsWithAI = () => {
-    const base = todoTitle.trim() || '这个待办';
+    const base = todoTitle.trim() || '这个任务';
     setTodoSteps([
       `明确「${base}」的完成标准`,
       '拆出最小可执行动作',
@@ -425,7 +425,7 @@ function App() {
             <div className="sheet-handle" />
             <div className="sheet-title-row">
               <div>
-                <p className="eyebrow">新待办</p>
+                <p className="eyebrow">新任务</p>
                 <h2>添加今天要推进的事</h2>
               </div>
             </div>
@@ -596,7 +596,7 @@ function App() {
               )}
             </section>
             <button className="primary-button" onClick={createTodo}>
-              创建待办
+              创建任务
             </button>
           </section>
         </div>
@@ -616,7 +616,7 @@ function App() {
             <div className="sheet-title-row">
               <div>
                 <p className="eyebrow">今日重点</p>
-                <h2>关联已有待办</h2>
+                <h2>关联已有任务</h2>
               </div>
             </div>
             <div className="associate-list">
@@ -632,7 +632,7 @@ function App() {
                   </button>
                 ))}
               {activeTodos.filter((todo) => !todo.isTodayFocus).length === 0 && (
-                <p className="empty-note">没有可关联的未完成待办</p>
+                <p className="empty-note">没有可关联的未完成任务</p>
               )}
             </div>
           </section>
@@ -680,7 +680,7 @@ function HomeScreen({
           <h1>你好 {nickname || '朋友'}</h1>
           <p className="summary">还有 {todayFocus.length + 2} 件事，其中 1 件 P0 需要推进</p>
         </div>
-        <button className="icon-button glass" aria-label="创建待办" onClick={openTodoSheet}>
+        <button className="icon-button glass" aria-label="创建任务" onClick={openTodoSheet}>
           <Plus size={22} />
         </button>
       </header>
@@ -704,7 +704,7 @@ function HomeScreen({
               <span className="muted">{todo.time ?? '未安排时间'}</span>
             </button>
           ))}
-          {todayFocus.length === 0 && <p className="empty-note">还没有今日重点，先关联一个待办。</p>}
+          {todayFocus.length === 0 && <p className="empty-note">还没有今日重点，先关联一个任务。</p>}
         </div>
       </section>
 
@@ -783,7 +783,7 @@ function CompletedBoxSheet({
               </button>
             </article>
           ))}
-          {completedTodos.length === 0 && <p className="empty-note">完成的待办会收纳在这里。</p>}
+          {completedTodos.length === 0 && <p className="empty-note">完成的任务会收纳在这里。</p>}
         </div>
         <button
           className="danger-button"
@@ -810,7 +810,7 @@ function TodoRow({
   const atRisk = todo.priority === 'P0' && todo.progress < 50;
   return (
     <div className={`todo-row ${atRisk ? 'risk' : ''}`}>
-      <button className="check-button" onClick={() => completeTodo(todo.id)} aria-label="完成待办">
+      <button className="check-button" onClick={() => completeTodo(todo.id)} aria-label="完成任务">
         <Circle size={22} />
       </button>
       <div className="todo-main">
@@ -976,7 +976,7 @@ function MonthCalendar() {
         return (
           <div className={`month-cell ${date === 8 && !cell.inactive ? 'today' : ''} ${cell.inactive ? 'inactive' : ''}`} key={`${date}-${index}`}>
             <span>{date}</span>
-            {!cell.inactive && [7, 8, 11, 16, 22].includes(date) && <small>待办</small>}
+            {!cell.inactive && [7, 8, 11, 16, 22].includes(date) && <small>任务</small>}
             {!cell.inactive && [8, 16].includes(date) && <small className="blue">重点</small>}
           </div>
         );
@@ -1005,10 +1005,13 @@ function FocusScreen({
   setIsPaused: (value: boolean) => void;
   setShowReflection: (value: boolean) => void;
   todos: Todo[];
-  focusTodoId: number;
-  setFocusTodoId: (id: number) => void;
+  focusTodoId: number | null;
+  setFocusTodoId: (id: number | null) => void;
 }) {
-  const selectedTodo = todos.find((todo) => todo.id === focusTodoId) ?? todos[0];
+  const [focusDuration, setFocusDuration] = useState<25 | 40 | 60>(40);
+  const [showTaskPicker, setShowTaskPicker] = useState(false);
+  const selectedTodo = focusTodoId === null ? undefined : todos.find((todo) => todo.id === focusTodoId);
+  const timerText = mode === 'down' ? `${focusDuration}:00` : '00:00';
 
   return (
     <div className="page focus-page">
@@ -1029,48 +1032,41 @@ function FocusScreen({
       </div>
 
       <section className="timer-orb glass-strong">
+        <div className="focus-linked-label">
+          {selectedTodo ? `关联任务：${selectedTodo.title}` : '未关联任务'}
+        </div>
         <div className="timer-ring">
-          <span>{mode === 'down' ? '24:32' : '08:18'}</span>
-          <small>
-            {isFocusing
-              ? isPaused ? '已暂停' : '正在专注'
-              : `关联：${selectedTodo?.title ?? '未选择待办'}`}
-          </small>
+          <span>{timerText}</span>
         </div>
-      </section>
-
-      <button className="linked-task glass">
-        <Timer size={20} />
-        <div>
-          <strong>{selectedTodo?.title ?? '选择一个待办开始专注'}</strong>
-          <p>
-            {selectedTodo
-              ? `${selectedTodo.priority} · ${selectedTodo.due} 截止`
-              : '从未完成待办中选择'}
-          </p>
-        </div>
-        <ChevronRight size={18} />
-      </button>
-
-      <section className="focus-picker glass">
-        <div className="section-heading">
-          <div>
-            <p className="eyebrow">关联待办</p>
-            <h3>选择这次专注要推进的事</h3>
+        {mode === 'down' && (
+          <div className="duration-options">
+            {[25, 40, 60].map((minutes) => (
+              <button
+                className={focusDuration === minutes ? 'selected' : ''}
+                key={minutes}
+                onClick={() => setFocusDuration(minutes as 25 | 40 | 60)}
+              >
+                {minutes}min
+              </button>
+            ))}
           </div>
-        </div>
-        <div className="focus-choice-list">
-          {todos.slice(0, 5).map((todo) => (
-            <button
-              className={todo.id === selectedTodo?.id ? 'selected' : ''}
-              key={todo.id}
-              onClick={() => setFocusTodoId(todo.id)}
-            >
-              <span className={`priority-dot ${todo.priority.toLowerCase()}`} />
-              <span>{todo.title}</span>
-              <small>{todo.progress}%</small>
+        )}
+        <div className="focus-association">
+          {selectedTodo ? (
+            <button className="linked-task" onClick={() => setShowTaskPicker(true)}>
+              <Timer size={20} />
+              <div>
+                <strong>{selectedTodo.title}</strong>
+                <p>{selectedTodo.priority} · {selectedTodo.due} 截止</p>
+              </div>
+              <ChevronRight size={18} />
             </button>
-          ))}
+          ) : (
+            <button className="associate-task-button" onClick={() => setShowTaskPicker(true)}>
+              <ListChecks size={18} />
+              关联任务
+            </button>
+          )}
         </div>
       </section>
 
@@ -1099,6 +1095,47 @@ function FocusScreen({
           </>
         )}
       </div>
+
+      {showTaskPicker && (
+        <div className="sheet-backdrop" onClick={() => setShowTaskPicker(false)}>
+          <section className="sheet floating-card glass-strong" onClick={(event) => event.stopPropagation()}>
+            <div className="sheet-title-row">
+              <div>
+                <p className="eyebrow">关联任务</p>
+                <h2>选择这次专注的任务</h2>
+              </div>
+              <Timer size={28} color="#007AFF" />
+            </div>
+            <div className="focus-choice-list">
+              <button
+                className={selectedTodo ? '' : 'selected'}
+                onClick={() => {
+                  setFocusTodoId(null);
+                  setShowTaskPicker(false);
+                }}
+              >
+                <span className="priority-dot neutral" />
+                <span>不关联任务</span>
+                <small>可直接开始</small>
+              </button>
+              {todos.slice(0, 5).map((todo) => (
+                <button
+                  className={todo.id === selectedTodo?.id ? 'selected' : ''}
+                  key={todo.id}
+                  onClick={() => {
+                    setFocusTodoId(todo.id);
+                    setShowTaskPicker(false);
+                  }}
+                >
+                  <span className={`priority-dot ${todo.priority.toLowerCase()}`} />
+                  <span>{todo.title}</span>
+                  <small>{todo.progress}%</small>
+                </button>
+              ))}
+            </div>
+          </section>
+        </div>
+      )}
     </div>
   );
 }
@@ -1117,7 +1154,7 @@ function AnalyticsScreen() {
         { label: 'P0 完成率', value: '50%', color: 'red' },
         { label: '专注时长', value: '48m', color: 'green' }
       ],
-      insight: '今天的关键风险是 P0 事项进度偏低，建议先选择一个待办进入专注，把第一段 25 分钟留给最临近截止的任务。'
+      insight: '今天的关键风险是 P0 任务进度偏低，建议先选择一个任务进入专注，把第一段 25 分钟留给最临近截止的任务。'
     },
     week: {
       label: '本周',
