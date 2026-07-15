@@ -1181,7 +1181,7 @@ function FocusScreen({
 
       {showTaskPicker && (
         <div className="sheet-backdrop" onClick={() => setShowTaskPicker(false)}>
-          <section className="sheet floating-card glass-strong" onClick={(event) => event.stopPropagation()}>
+          <section className="sheet floating-card task-picker-sheet glass-strong" onClick={(event) => event.stopPropagation()}>
             <div className="sheet-title-row">
               <div>
                 <p className="eyebrow">关联任务</p>

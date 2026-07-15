@@ -1108,17 +1108,17 @@ h3 {
 
 .focus-choice-list {
   display: grid;
-  gap: 8px;
+  gap: 12px;
 }
 
 .focus-choice-list button {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
-  gap: 9px;
-  min-height: 44px;
-  border-radius: 15px;
-  padding: 9px 10px;
+  gap: 12px;
+  min-height: 52px;
+  border-radius: 18px;
+  padding: 12px 14px;
   background: rgba(255, 255, 255, 0.48);
   text-align: left;
 }
@@ -1138,12 +1138,26 @@ h3 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-top: 14px;
+  margin-top: 20px;
 }
 
 .task-picker-actions .secondary-button {
   min-height: 46px;
   border-radius: 17px;
+}
+
+.task-picker-sheet .sheet-title-row {
+  align-items: flex-start;
+  margin-bottom: 22px;
+}
+
+.task-picker-sheet .sheet-title-row h2 {
+  margin-top: 5px;
+  line-height: 1.2;
+}
+
+.task-picker-sheet .focus-choice-list {
+  margin-top: 2px;
 }
 
 .focus-actions {
