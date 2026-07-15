@@ -143,6 +143,7 @@ function App() {
   const [isFocusing, setIsFocusing] = useState(false);
   const [showReflection, setShowReflection] = useState(false);
   const [reflectionDraft, setReflectionDraft] = useState('');
+  const [reflectionTodoDraft, setReflectionTodoDraft] = useState<Todo | undefined>();
   const [reflections, setReflections] = useState<string[]>([]);
   const [showTodoSheet, setShowTodoSheet] = useState(false);
   const [todoTitle, setTodoTitle] = useState('');
@@ -170,6 +171,11 @@ function App() {
   const completedTodos = todos.filter((todo) => todo.progress === 100);
   const completedCount = completedTodos.length;
   const focusedTodo = focusTodoId === null ? undefined : todos.find((todo) => todo.id === focusTodoId);
+
+  useEffect(() => {
+    if (!showReflection) return;
+    setReflectionTodoDraft(focusedTodo ? { ...focusedTodo } : undefined);
+  }, [showReflection, focusedTodo?.id]);
 
   const groupedTodos = useMemo(() => {
     const keyList = groupBy === 'priority' ? ['P0', 'P1', 'P2'] : ['工作', '日常', '学习', '健康'];
@@ -322,7 +328,22 @@ function App() {
     if (nextReflection) {
       setReflections((current) => [nextReflection, ...current]);
     }
+    if (reflectionTodoDraft) {
+      setTodos((current) =>
+        current.map((todo) =>
+          todo.id === reflectionTodoDraft.id
+            ? {
+                ...todo,
+                progress: reflectionTodoDraft.progress,
+                lastProgress: reflectionTodoDraft.lastProgress,
+                completedAt: reflectionTodoDraft.completedAt
+              }
+            : todo
+        )
+      );
+    }
     setReflectionDraft('');
+    setReflectionTodoDraft(undefined);
     setShowReflection(false);
     setIsFocusing(false);
     setIsPaused(false);
@@ -330,9 +351,37 @@ function App() {
 
   const skipReflection = () => {
     setReflectionDraft('');
+    setReflectionTodoDraft(undefined);
     setShowReflection(false);
     setIsFocusing(false);
     setIsPaused(false);
+  };
+
+  const completeReflectionTodo = (id: number) => {
+    setReflectionTodoDraft((current) =>
+      current && current.id === id
+        ? {
+            ...current,
+            progress: 100,
+            lastProgress: current.progress >= 100 ? current.lastProgress ?? 0 : current.progress,
+            completedAt: '刚刚完成'
+          }
+        : current
+    );
+  };
+
+  const updateReflectionProgress = (id: number, progress: number) => {
+    setReflectionTodoDraft((current) =>
+      current && current.id === id
+        ? {
+            ...current,
+            progress,
+            lastProgress:
+              progress >= 100 ? (current.progress >= 100 ? current.lastProgress ?? 0 : current.progress) : current.lastProgress,
+            completedAt: progress >= 100 ? '刚刚完成' : undefined
+          }
+        : current
+    );
   };
 
   return (
@@ -422,7 +471,7 @@ function App() {
               </div>
               <CheckCircle2 size={28} color="#34C759" />
             </div>
-            {focusedTodo && (
+            {reflectionTodoDraft && (
               <section className="reflection-task-panel glass">
                 <div className="section-heading compact-heading">
                   <div>
@@ -430,7 +479,11 @@ function App() {
                     <h3>更新任务状态</h3>
                   </div>
                 </div>
-                <TodoRow todo={focusedTodo} completeTodo={completeTodo} updateProgress={updateProgress} />
+                <TodoRow
+                  todo={reflectionTodoDraft}
+                  completeTodo={completeReflectionTodo}
+                  updateProgress={updateReflectionProgress}
+                />
               </section>
             )}
             <textarea
@@ -440,10 +493,10 @@ function App() {
             />
             <div className="reflection-actions">
               <button className="secondary-button glass" onClick={skipReflection}>
-                不写了
+                就这样吧
               </button>
               <button className="primary-button" onClick={saveReflection}>
-                保存感想
+                我做完啦
               </button>
             </div>
           </section>
