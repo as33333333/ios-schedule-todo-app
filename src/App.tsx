@@ -169,6 +169,7 @@ function App() {
   const activeTodos = todos.filter((todo) => todo.progress < 100);
   const completedTodos = todos.filter((todo) => todo.progress === 100);
   const completedCount = completedTodos.length;
+  const focusedTodo = focusTodoId === null ? undefined : todos.find((todo) => todo.id === focusTodoId);
 
   const groupedTodos = useMemo(() => {
     const keyList = groupBy === 'priority' ? ['P0', 'P1', 'P2'] : ['工作', '日常', '学习', '健康'];
@@ -327,6 +328,13 @@ function App() {
     setIsPaused(false);
   };
 
+  const skipReflection = () => {
+    setReflectionDraft('');
+    setShowReflection(false);
+    setIsFocusing(false);
+    setIsPaused(false);
+  };
+
   return (
     <main className="app-shell">
       <div className="ambient ambient-a" />
@@ -414,14 +422,30 @@ function App() {
               </div>
               <CheckCircle2 size={28} color="#34C759" />
             </div>
+            {focusedTodo && (
+              <section className="reflection-task-panel glass">
+                <div className="section-heading compact-heading">
+                  <div>
+                    <p className="eyebrow">关联任务</p>
+                    <h3>更新任务状态</h3>
+                  </div>
+                </div>
+                <TodoRow todo={focusedTodo} completeTodo={completeTodo} updateProgress={updateProgress} />
+              </section>
+            )}
             <textarea
               value={reflectionDraft}
               onChange={(event) => setReflectionDraft(event.target.value)}
               placeholder="这次专注有什么收获、阻碍或想法？"
             />
-            <button className="primary-button" onClick={saveReflection}>
-              保存感想
-            </button>
+            <div className="reflection-actions">
+              <button className="secondary-button glass" onClick={skipReflection}>
+                不写了
+              </button>
+              <button className="primary-button" onClick={saveReflection}>
+                保存感想
+              </button>
+            </div>
           </section>
         </div>
       )}

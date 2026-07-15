@@ -1099,6 +1099,40 @@ h3 {
   margin-top: 5px;
 }
 
+.reflection-task-panel {
+  display: grid;
+  gap: 8px;
+  margin: 18px 0 12px;
+  border-radius: 22px;
+  padding: 14px 14px 6px;
+}
+
+.compact-heading {
+  align-items: center;
+  min-height: auto;
+}
+
+.compact-heading h3 {
+  margin-top: 2px;
+}
+
+.reflection-task-panel .todo-row {
+  min-height: 86px;
+  border-top: 0;
+}
+
+.reflection-actions {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-top: 8px;
+}
+
+.reflection-actions .primary-button,
+.reflection-actions .secondary-button {
+  min-height: 48px;
+}
+
 .focus-picker {
   display: grid;
   gap: 10px;
