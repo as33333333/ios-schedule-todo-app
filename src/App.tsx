@@ -1023,10 +1023,10 @@ function FocusScreen({
       </header>
 
       <div className="segmented glass">
-        <button className={mode === 'down' ? 'selected' : ''} onClick={() => setMode('down')}>
+        <button className={mode === 'down' ? 'selected' : ''} disabled={isFocusing} onClick={() => setMode('down')}>
           倒计时
         </button>
-        <button className={mode === 'up' ? 'selected' : ''} onClick={() => setMode('up')}>
+        <button className={mode === 'up' ? 'selected' : ''} disabled={isFocusing} onClick={() => setMode('up')}>
           正计时
         </button>
       </div>
@@ -1037,16 +1037,18 @@ function FocusScreen({
         </div>
         <div className="timer-ring">
           <span>{timerText}</span>
+          {isFocusing && <small>{isPaused ? '已暂停' : '正在专注'}</small>}
         </div>
         {mode === 'down' && (
-          <div className="duration-options">
+          <div className={`duration-options ${isFocusing ? 'locked' : ''}`}>
             {[25, 40, 60].map((minutes) => (
               <button
                 className={focusDuration === minutes ? 'selected' : ''}
                 key={minutes}
+                disabled={isFocusing}
                 onClick={() => setFocusDuration(minutes as 25 | 40 | 60)}
               >
-                {minutes}min
+                {isFocusing && focusDuration !== minutes ? '' : `${minutes}min`}
               </button>
             ))}
           </div>

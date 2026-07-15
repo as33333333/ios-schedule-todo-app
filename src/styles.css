@@ -962,39 +962,55 @@ h3 {
 }
 
 .focus-page {
-  min-height: 680px;
+  gap: 12px;
+  min-height: auto;
+}
+
+.focus-page .hero-row.compact {
+  min-height: 58px;
 }
 
 .timer-orb {
   display: grid;
-  gap: 14px;
-  min-height: 430px;
+  gap: 12px;
+  min-height: 348px;
   place-items: center stretch;
+  padding: 16px;
 }
 
 .timer-ring {
   display: grid;
-  width: 210px;
-  height: 210px;
+  width: 168px;
+  height: 168px;
   place-items: center;
-  border: 12px solid rgba(0, 122, 255, 0.14);
+  border: 10px solid rgba(0, 122, 255, 0.14);
   border-top-color: #007aff;
   border-radius: 50%;
   text-align: center;
+  align-content: center;
   justify-self: center;
+  justify-items: center;
 }
 
 .timer-ring span {
   display: block;
-  font-size: 48px;
+  font-size: 39px;
   font-weight: 800;
   line-height: 1;
 }
 
-.focus-linked-label {
-  min-height: 22px;
+.timer-ring small {
+  display: block;
+  margin-top: 7px;
   color: #6b7280;
-  font-size: 14px;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.focus-linked-label {
+  min-height: 20px;
+  color: #6b7280;
+  font-size: 13px;
   font-weight: 800;
   text-align: center;
 }
@@ -1020,6 +1036,15 @@ h3 {
   color: #007aff;
 }
 
+.duration-options.locked button:not(.selected) {
+  pointer-events: none;
+  opacity: 0;
+}
+
+.duration-options button:disabled {
+  cursor: default;
+}
+
 .focus-association {
   width: 100%;
 }
@@ -1034,11 +1059,17 @@ h3 {
 
 .linked-task {
   width: 100%;
-  min-height: 70px;
-  padding: 14px;
+  min-height: 78px;
+  padding: 15px 16px;
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.56);
   text-align: left;
+}
+
+.linked-task strong {
+  display: block;
+  font-size: 15px;
+  line-height: 1.35;
 }
 
 .associate-task-button {
@@ -1061,7 +1092,11 @@ h3 {
 .reflection p {
   color: #6b7280;
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.45;
+}
+
+.linked-task p {
+  margin-top: 5px;
 }
 
 .focus-picker {
@@ -1103,7 +1138,7 @@ h3 {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 10px;
-  margin-bottom: 18px;
+  margin-bottom: 10px;
 }
 
 .focus-actions .wide {
