@@ -341,6 +341,12 @@ h3 {
   place-items: center;
   background: transparent;
   color: #8e8e93;
+  transition: color 0.18s ease, transform 0.18s ease;
+}
+
+.todo-row.completed .check-button {
+  color: #34c759;
+  transform: scale(1.03);
 }
 
 .todo-main p {

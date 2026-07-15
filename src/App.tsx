@@ -839,10 +839,11 @@ function TodoRow({
   updateProgress: (id: number, progress: number) => void;
 }) {
   const atRisk = todo.priority === 'P0' && todo.progress < 50;
+  const isComplete = todo.progress === 100;
   return (
-    <div className={`todo-row ${atRisk ? 'risk' : ''}`}>
+    <div className={`todo-row ${atRisk ? 'risk' : ''} ${isComplete ? 'completed' : ''}`}>
       <button className="check-button" onClick={() => completeTodo(todo.id)} aria-label="完成任务">
-        <Circle size={22} />
+        {isComplete ? <CheckCircle2 size={23} /> : <Circle size={22} />}
       </button>
       <div className="todo-main">
         <div className="todo-title-line">
