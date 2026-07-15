@@ -16,8 +16,10 @@ import {
   Pause,
   Play,
   Plus,
+  RotateCcw,
   Sparkles,
   Timer,
+  Trash2,
   UserRound,
   Wand2
 } from 'lucide-react';
@@ -39,6 +41,8 @@ type Todo = {
   isTodayFocus?: boolean;
   isRecurring?: boolean;
   steps?: string[];
+  lastProgress?: number;
+  completedAt?: string;
 };
 
 const initialTodos: Todo[] = [
@@ -149,6 +153,7 @@ function App() {
   const [todoStepDraft, setTodoStepDraft] = useState('');
   const [todoSteps, setTodoSteps] = useState<string[]>([]);
   const [showAssociateSheet, setShowAssociateSheet] = useState(false);
+  const [showCompletedBox, setShowCompletedBox] = useState(false);
   const [isPaused, setIsPaused] = useState(false);
   const [focusTodoId, setFocusTodoId] = useState(1);
   const [nickname, setNickname] = useState(() => window.localStorage.getItem('schedule-todo-nickname') ?? '');
@@ -156,7 +161,8 @@ function App() {
 
   const todayFocus = todos.filter((todo) => todo.isTodayFocus && todo.progress < 100);
   const activeTodos = todos.filter((todo) => todo.progress < 100);
-  const completedCount = todos.filter((todo) => todo.progress === 100).length;
+  const completedTodos = todos.filter((todo) => todo.progress === 100);
+  const completedCount = completedTodos.length;
 
   const groupedTodos = useMemo(() => {
     const keyList = groupBy === 'priority' ? ['P0', 'P1', 'P2'] : ['工作', '日常', '学习', '健康'];
@@ -167,7 +173,18 @@ function App() {
   }, [activeTodos, groupBy]);
 
   const completeTodo = (id: number) => {
-    setTodos((current) => current.map((todo) => (todo.id === id ? { ...todo, progress: 100 } : todo)));
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === id
+          ? {
+              ...todo,
+              progress: 100,
+              lastProgress: todo.progress >= 100 ? todo.lastProgress ?? 0 : todo.progress,
+              completedAt: '刚刚完成'
+            }
+          : todo
+      )
+    );
   };
 
   const bumpProgress = (id: number) => {
@@ -177,7 +194,37 @@ function App() {
   };
 
   const updateProgress = (id: number, progress: number) => {
-    setTodos((current) => current.map((todo) => (todo.id === id ? { ...todo, progress } : todo)));
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === id
+          ? {
+              ...todo,
+              progress,
+              lastProgress: progress >= 100 ? (todo.progress >= 100 ? todo.lastProgress ?? 0 : todo.progress) : todo.lastProgress,
+              completedAt: progress >= 100 ? '刚刚完成' : undefined
+            }
+          : todo
+      )
+    );
+  };
+
+  const restoreTodo = (id: number) => {
+    setTodos((current) =>
+      current.map((todo) =>
+        todo.id === id
+          ? {
+              ...todo,
+              progress: Math.min(todo.lastProgress ?? 0, 99),
+              completedAt: undefined
+            }
+          : todo
+      )
+    );
+  };
+
+  const clearCompletedTodos = () => {
+    setTodos((current) => current.filter((todo) => todo.progress < 100));
+    setShowCompletedBox(false);
   };
 
   const addFocusTodo = () => {
@@ -300,6 +347,7 @@ function App() {
               nickname={nickname}
               openTodoSheet={() => setShowTodoSheet(true)}
               openAssociateSheet={() => setShowAssociateSheet(true)}
+              openCompletedBox={() => setShowCompletedBox(true)}
             />
           )}
           {activeTab === 'calendar' && <CalendarScreen view={calendarView} setView={setCalendarView} />}
@@ -553,6 +601,14 @@ function App() {
           </section>
         </div>
       )}
+      {showCompletedBox && (
+        <CompletedBoxSheet
+          completedTodos={completedTodos}
+          restoreTodo={restoreTodo}
+          clearCompletedTodos={clearCompletedTodos}
+          close={() => setShowCompletedBox(false)}
+        />
+      )}
       {showAssociateSheet && (
         <div className="sheet-backdrop" onClick={() => setShowAssociateSheet(false)}>
           <section className="sheet glass-strong" onClick={(event) => event.stopPropagation()}>
@@ -598,7 +654,8 @@ function HomeScreen({
   completedCount,
   nickname,
   openTodoSheet,
-  openAssociateSheet
+  openAssociateSheet,
+  openCompletedBox
 }: {
   todos: Todo[];
   todayFocus: Todo[];
@@ -613,6 +670,7 @@ function HomeScreen({
   nickname: string;
   openTodoSheet: () => void;
   openAssociateSheet: () => void;
+  openCompletedBox: () => void;
 }) {
   return (
     <div className="page">
@@ -677,11 +735,65 @@ function HomeScreen({
         )}
       </div>
 
-      <button className="complete-box glass">
+      <button className="complete-box glass" onClick={openCompletedBox}>
         <Inbox size={18} />
         完成箱
         <span>{completedCount}</span>
       </button>
+    </div>
+  );
+}
+
+function CompletedBoxSheet({
+  completedTodos,
+  restoreTodo,
+  clearCompletedTodos,
+  close
+}: {
+  completedTodos: Todo[];
+  restoreTodo: (id: number) => void;
+  clearCompletedTodos: () => void;
+  close: () => void;
+}) {
+  return (
+    <div className="sheet-backdrop" onClick={close}>
+      <section className="sheet glass-strong" onClick={(event) => event.stopPropagation()}>
+        <div className="sheet-handle" />
+        <div className="sheet-title-row">
+          <div>
+            <p className="eyebrow">完成箱</p>
+            <h2>已完成清单</h2>
+          </div>
+          <span className="completed-total">{completedTodos.length}</span>
+        </div>
+        <div className="completed-list">
+          {completedTodos.map((todo) => (
+            <article className="completed-item" key={todo.id}>
+              <div>
+                <strong>{todo.title}</strong>
+                <p>{todo.completedAt ?? '已完成'} · {todo.type} · {todo.due}</p>
+              </div>
+              <button
+                type="button"
+                className="restore-button"
+                onClick={() => restoreTodo(todo.id)}
+              >
+                <RotateCcw size={15} />
+                恢复
+              </button>
+            </article>
+          ))}
+          {completedTodos.length === 0 && <p className="empty-note">完成的待办会收纳在这里。</p>}
+        </div>
+        <button
+          className="danger-button"
+          disabled={completedTodos.length === 0}
+          onClick={clearCompletedTodos}
+        >
+          <Trash2 size={17} />
+          清空完成箱
+        </button>
+      </section>
     </div>
   );
 }
