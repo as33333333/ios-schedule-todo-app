@@ -24,6 +24,9 @@ import {
   Wand2
 } from 'lucide-react';
 import { ReactNode, useEffect, useMemo, useState } from 'react';
+import scheduleAnalytics from './assets/schedule-analytics.png';
+import scheduleHomePrimary from './assets/schedule-home-primary.png';
+import scheduleHomeSecondary from './assets/schedule-home-secondary.png';
 
 type Tab = 'home' | 'calendar' | 'focus' | 'analytics' | 'profile';
 type Priority = 'P0' | 'P1' | 'P2';
@@ -942,6 +945,12 @@ function CalendarScreen({
           <Plus size={22} />
         </button>
       </header>
+
+      <section className="schedule-collage glass" aria-label="日程管理预览拼图">
+        <img className="collage-shot primary" src={scheduleHomePrimary} alt="首页任务管理预览" />
+        <img className="collage-shot secondary" src={scheduleHomeSecondary} alt="今日重点预览" />
+        <img className="collage-shot analytics" src={scheduleAnalytics} alt="分析页预览" />
+      </section>
 
       <div className="segmented glass three">
         <button className={view === 'day' ? 'selected' : ''} onClick={() => setView('day')}>
